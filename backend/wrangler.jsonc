@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pmkthkd-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-18",
+  "workers_dev": true,
+  "vars": {
+    "APP_ENV": "production",
+    "ALLOWED_ORIGINS": "https://REPLACE-ME.pages.dev,http://localhost:5173",
+    "SESSION_TTL_DAYS": "14"
+  },
+  "secrets": {
+    "required": ["BOOTSTRAP_TOKEN"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "pmkthkd",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

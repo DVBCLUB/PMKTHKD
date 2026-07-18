@@ -1,0 +1,19 @@
+{
+  "name": "pmkthkd-backend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "types": "wrangler types",
+    "db:create": "wrangler d1 create pmkthkd",
+    "db:migrate:local": "wrangler d1 migrations apply pmkthkd --local",
+    "db:migrate:remote": "wrangler d1 migrations apply pmkthkd --remote"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.2",
+    "wrangler": "^4.68.0"
+  }
+}

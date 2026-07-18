@@ -1,0 +1,2 @@
+# Tạo chuỗi ngẫu nhiên dài, chỉ dùng đúng một lần để tạo tài khoản chủ cửa hàng.
+BOOTSTRAP_TOKEN="replace-with-a-long-random-secret"
