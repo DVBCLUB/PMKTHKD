@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install frontend dependencies
+        run: npm install
+      - name: Typecheck frontend
+        id: frontend_typecheck
+        continue-on-error: true
+        run: npm run lint 2>&1 | tee frontend-typecheck.log
+      - name: Upload frontend typecheck log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-typecheck-log
+          path: frontend-typecheck.log
+      - name: Stop on frontend type errors
+        if: steps.frontend_typecheck.outcome == 'failure'
+        run: exit 1
+      - name: Build frontend
+        run: npm run build
+      - name: Install backend dependencies
+        run: npm --prefix backend install
+      - name: Typecheck backend
+        run: npm run backend:typecheck
