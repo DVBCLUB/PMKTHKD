@@ -2,33 +2,58 @@
 
 Phần mềm quản lý bán hàng, tồn kho, công nợ và sổ thu chi cho hộ kinh doanh tạp hóa.
 
-## Kiến trúc
+## Kiến trúc miễn phí
 
 ```text
-React + Vite frontend
+Cloudflare Pages
+React + Vite + PWA
         │
-        ├── IndexedDB cache/offline (giai đoạn tiếp theo)
-        │
-        ▼
+        ├── IndexedDB cache + outbox khi mất mạng
+        ├── Tự nhập dữ liệu localStorage cũ lần đầu
+        └── Đồng bộ có version và xử lý xung đột
+                │
+                ▼
 Cloudflare Worker API
         │
-        ▼
-Cloudflare D1 database
+        ├── Auth + phân quyền + audit log
+        ├── API sản phẩm, kho, đơn hàng, thu chi
+        └── Snapshot tương thích + 30 điểm khôi phục
+                │
+                ▼
+Cloudflare D1
 ```
 
-Frontend hiện tại vẫn giữ giao diện và dữ liệu demo. Backend Cloudflare mới nằm trong thư mục [`backend`](./backend) và đã có:
+Frontend hiện có:
+
+- Màn hình đăng nhập và thiết lập chủ cửa hàng lần đầu.
+- Cấu hình Worker URL ngay trên giao diện, không phải build lại chỉ để đổi URL.
+- Tự chuyển dữ liệu cũ từ `localStorage` lên D1.
+- IndexedDB cache và hàng đợi offline.
+- Đồng bộ nền sau 1,5 giây, kéo dữ liệu mới mỗi 60 giây hoặc khi quay lại tab.
+- Phát hiện xung đột khi hai máy cùng sửa và cho chọn bản giữ lại.
+- PWA cài lên máy tính/điện thoại, mở được khi mất mạng.
+- Tạo checkpoint D1 và tải backup JSON từ giao diện.
+
+Backend trong [`backend`](./backend) có:
 
 - Đăng nhập, phiên làm việc và phân quyền nhân viên.
-- Database cho sản phẩm, tồn kho, đơn hàng, đối tác và sổ thu chi.
-- Chống trùng đơn và ghi dữ liệu theo transaction.
-- Token an toàn cho Chrome Extension.
-- Audit log, sync event và backup JSON.
+- Database chuẩn hóa cho sản phẩm, tồn kho, đơn hàng, đối tác và sổ thu chi.
+- Chống trùng đơn, audit log và sync event.
+- Token riêng cho Chrome Extension.
+- Snapshot tương thích để giao diện cũ hoạt động ngay trong lúc chuyển dần sang API chuẩn hóa.
+- Tối đa 30 phiên bản gần nhất để khôi phục khi ghi nhầm hoặc xung đột.
 
 ## Chạy frontend
 
 ```bash
 npm install
 npm run dev
+```
+
+Mở trang và nhập địa chỉ Worker. Có thể đặt sẵn bằng:
+
+```env
+VITE_API_URL=http://localhost:8787
 ```
 
 ## Chạy backend
@@ -41,12 +66,16 @@ npm run db:migrate:local
 npm run dev
 ```
 
-Xem hướng dẫn cấu hình D1, bootstrap tài khoản và deploy tại [`backend/README.md`](./backend/README.md).
+## Kiểm tra
 
-## Biến môi trường frontend
-
-```env
-VITE_API_URL=http://localhost:8787
+```bash
+npm run lint
+npm run build
+npm run backend:typecheck
 ```
 
-Khi deploy, thay bằng URL Worker thật.
+## Deploy
+
+Xem hướng dẫn đầy đủ tại [`docs/CLOUDFLARE_DEPLOY.md`](./docs/CLOUDFLARE_DEPLOY.md).
+
+Không merge hoặc deploy trước khi đã thay `database_id`, `ALLOWED_ORIGINS` và đặt `BOOTSTRAP_TOKEN`.

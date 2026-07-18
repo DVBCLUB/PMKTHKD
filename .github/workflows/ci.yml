@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install frontend dependencies
+        run: npm install
+      - name: Typecheck frontend
+        run: npm run lint
+      - name: Build frontend
+        run: npm run build
+      - name: Install backend dependencies
+        run: npm --prefix backend install
+      - name: Typecheck backend
+        run: npm run backend:typecheck

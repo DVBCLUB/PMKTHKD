@@ -15,6 +15,7 @@ import { importOrder, listOrders, orderDetail } from './orders';
 import { listCashTransactions, createCashTransaction, listPartners, createPartner } from './accounting';
 import { listUsers, createUser, updateUser, listIntegrationTokens, syncEvents, backup, listAuditLogs } from './admin';
 import { auditStatement, requestId } from './db';
+import { createAppStateCheckpoint, getAppState, listAppStateHistory, putAppState, restoreAppState } from './appState';
 
 async function route(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
@@ -60,6 +61,23 @@ async function route(request: Request, env: Env, ctx: ExecutionContext): Promise
     const shop = await env.DB.prepare('SELECT id, name, timezone, currency FROM shops WHERE id = ?')
       .bind(principal.shopId).first();
     return ok(request, env, { principal, shop });
+  }
+
+  if (method === 'GET' && pathname === '/api/app-state') {
+    return ok(request, env, await getAppState(env, principal));
+  }
+  if (method === 'POST' && pathname === '/api/app-state') {
+    return ok(request, env, await putAppState(request, env, principal));
+  }
+  if (method === 'POST' && pathname === '/api/app-state/checkpoint') {
+    return ok(request, env, await createAppStateCheckpoint(request, env, principal), undefined, 201);
+  }
+  if (method === 'GET' && pathname === '/api/app-state/history') {
+    return ok(request, env, await listAppStateHistory(env, principal, url));
+  }
+  const restoreMatch = pathMatch(pathname, /^\/api\/app-state\/history\/([^/]+)\/restore$/);
+  if (method === 'POST' && restoreMatch) {
+    return ok(request, env, await restoreAppState(request, env, principal, decodeURIComponent(restoreMatch[1])));
   }
 
   if (method === 'GET' && pathname === '/api/dashboard') return handleDashboard(request, env, principal);

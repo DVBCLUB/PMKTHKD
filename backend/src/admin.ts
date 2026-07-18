@@ -1,7 +1,7 @@
 import { requireAnyRole, requireRole, requireScope } from './auth';
 import type { AuthPrincipal, Env, UserRole } from './types';
 import { ApiError, booleanValue, hashPassword, json, normalizeEmail, nowIso, ok, pagination, readJson, stringValue, uuid } from './utils';
-import { auditStatement, requestId, syncStatement, validateRole } from './db';
+import { auditStatement, requestId, validateRole } from './db';
 
 interface SyncRow { id: number; entity_type: string; entity_id: string; operation: string; changed_at: string }
 
@@ -77,14 +77,14 @@ export async function syncEvents(request: Request, env: Env, principal: AuthPrin
   const result = await env.DB.prepare(`
     SELECT id, entity_type, entity_id, operation, changed_at
     FROM sync_events WHERE shop_id = ? AND id > ? ORDER BY id ASC LIMIT 500
-  `).bind(principal.shopId, cursor).all();
-  const nextCursor = result.results.length ? (result.results[result.results.length - 1] as SyncRow).id : cursor;
+  `).bind(principal.shopId, cursor).all<SyncRow>();
+  const nextCursor = result.results.length ? result.results[result.results.length - 1].id : cursor;
   return ok(request, env, result.results, { cursor, nextCursor, hasMore: result.results.length === 500 });
 }
 
 export async function backup(request: Request, env: Env, principal: AuthPrincipal): Promise<Response> {
   requireAnyRole(principal, ['owner', 'accountant']);
-  const [shop, users, products, partners, orders, items, movements, transactions] = await env.DB.batch([
+  const [shop, users, products, partners, orders, items, movements, transactions, appState] = await env.DB.batch([
     env.DB.prepare('SELECT * FROM shops WHERE id = ?').bind(principal.shopId),
     env.DB.prepare(`SELECT id, email, display_name, role, is_active, created_at, updated_at FROM users WHERE shop_id = ?`).bind(principal.shopId),
     env.DB.prepare('SELECT * FROM products WHERE shop_id = ?').bind(principal.shopId),
@@ -93,12 +93,23 @@ export async function backup(request: Request, env: Env, principal: AuthPrincipa
     env.DB.prepare('SELECT oi.* FROM order_items oi JOIN orders o ON o.id = oi.order_id WHERE o.shop_id = ?').bind(principal.shopId),
     env.DB.prepare('SELECT * FROM inventory_movements WHERE shop_id = ? ORDER BY created_at').bind(principal.shopId),
     env.DB.prepare('SELECT * FROM cash_transactions WHERE shop_id = ? ORDER BY occurred_at').bind(principal.shopId),
+    env.DB.prepare('SELECT version, state_json, checksum, device_id, updated_at FROM app_state_snapshots WHERE shop_id = ?').bind(principal.shopId),
   ]);
   const generatedAt = nowIso();
+  const stateRow = appState.results[0] as { version?: number; state_json?: string; checksum?: string; device_id?: string; updated_at?: string } | undefined;
+  let compatibilityState: unknown = null;
+  if (stateRow?.state_json) {
+    try {
+      compatibilityState = JSON.parse(stateRow.state_json);
+    } catch {
+      compatibilityState = { error: 'CORRUPT_APP_STATE', raw: stateRow.state_json };
+    }
+  }
+
   return json(request, env, {
     success: true,
     data: {
-      format: 'pmkthkd-backup-v1',
+      format: 'pmkthkd-backup-v2',
       generatedAt,
       shop: shop.results[0] || null,
       users: users.results,
@@ -108,6 +119,13 @@ export async function backup(request: Request, env: Env, principal: AuthPrincipa
       orderItems: items.results,
       inventoryMovements: movements.results,
       cashTransactions: transactions.results,
+      appState: stateRow ? {
+        version: stateRow.version,
+        checksum: stateRow.checksum,
+        deviceId: stateRow.device_id,
+        updatedAt: stateRow.updated_at,
+        state: compatibilityState,
+      } : null,
     },
   }, 200, {
     'Content-Disposition': `attachment; filename="pmkthkd-backup-${generatedAt.slice(0, 10)}.json"`,

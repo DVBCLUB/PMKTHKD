@@ -7,10 +7,8 @@
   "vars": {
     "APP_ENV": "production",
     "ALLOWED_ORIGINS": "https://REPLACE-ME.pages.dev,http://localhost:5173",
-    "SESSION_TTL_DAYS": "14"
-  },
-  "secrets": {
-    "required": ["BOOTSTRAP_TOKEN"]
+    "SESSION_TTL_DAYS": "14",
+    "MAX_STATE_BYTES": "2000000"
   },
   "d1_databases": [
     {

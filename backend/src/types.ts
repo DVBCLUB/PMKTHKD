@@ -6,6 +6,7 @@ export interface Env {
   APP_ENV: string;
   ALLOWED_ORIGINS: string;
   SESSION_TTL_DAYS: string;
+  MAX_STATE_BYTES?: string;
   BOOTSTRAP_TOKEN: string;
 }
 
