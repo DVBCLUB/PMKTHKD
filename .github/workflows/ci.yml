@@ -16,7 +16,18 @@ jobs:
       - name: Install frontend dependencies
         run: npm install
       - name: Typecheck frontend
-        run: npm run lint
+        id: frontend_typecheck
+        continue-on-error: true
+        run: npm run lint 2>&1 | tee frontend-typecheck.log
+      - name: Upload frontend typecheck log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-typecheck-log
+          path: frontend-typecheck.log
+      - name: Stop on frontend type errors
+        if: steps.frontend_typecheck.outcome == 'failure'
+        run: exit 1
       - name: Build frontend
         run: npm run build
       - name: Install backend dependencies
