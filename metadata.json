@@ -1,0 +1,6 @@
+{
+  "name": "Phần mềm Bán hàng & Sổ kế toán Tạp hóa",
+  "description": "Hệ thống quản lý bán hàng (POS), sổ sách kế toán, đồng bộ kho Shopee & TikTok Shop, in đơn hàng loạt, theo dõi vận chuyển dành cho cửa hàng tạp hóa.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
